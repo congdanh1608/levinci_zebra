@@ -1,6 +1,33 @@
 import Flutter
 import UIKit
 
+#if targetEnvironment(simulator)
+
+// libZSDK_API.a has no iOS-Simulator arm64 slice, so it isn't linked for simulator
+// builds (see levinci_zebra.podspec). This stub keeps the plugin registrable there
+// while every printer call reports unsupported instead of failing to link.
+public class LevinciZebraPlugin: NSObject, FlutterPlugin {
+  public static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(
+      name: "levinci_zebra", binaryMessenger: registrar.messenger())
+    let instance = LevinciZebraPlugin()
+    registrar.addMethodCallDelegate(instance, channel: channel)
+  }
+
+  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    if call.method == "getPlatformVersion" {
+      result("iOS " + UIDevice.current.systemVersion)
+      return
+    }
+    result(FlutterError(
+      code: "UNSUPPORTED_ON_SIMULATOR",
+      message: "Zebra printer is not available on iOS Simulator",
+      details: nil))
+  }
+}
+
+#else
+
 public class LevinciZebraPlugin: NSObject, FlutterPlugin {
   // Serial queue để in tuần tự (1 lệnh 1 lần)
   private let zebraPrintQueue = DispatchQueue(label: "com.yourapp.zebra.print.queue")
@@ -282,3 +309,5 @@ func sendCommand(
     }
   }
 }
+
+#endif

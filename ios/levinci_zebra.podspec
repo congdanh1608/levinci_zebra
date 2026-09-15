@@ -20,7 +20,6 @@ A new Flutter plugin project.
 
     # Zebra SDK as vendored framework
 #  s.vendored_frameworks = '**/*.xcframework'
-  s.vendored_libraries = '**/*.a'
     # Link system frameworks if SDK needs them
   s.frameworks       = 'CoreBluetooth', 'Foundation', 'QuartzCore', 'ExternalAccessory'
   s.static_framework = true
@@ -30,10 +29,16 @@ A new Flutter plugin project.
   s.dependency 'Flutter'
   s.platform = :ios, '13.0'
 
+  # libZSDK_API.a's arm64 slice is tagged for device only (legacy LC_VERSION_MIN_IPHONEOS,
+  # no simulator variant), so it can't be vendored normally (that would link it for every SDK).
+  # Link it for device builds only via OTHER_LDFLAGS; the Swift/ObjC code that calls into it
+  # is compiled out for the simulator (see LevinciZebraPlugin.swift / EXCLUDED_SOURCE_FILE_NAMES).
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = {
   'DEFINES_MODULE' => 'YES',
-  'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386'
+  'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
+  'EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]' => 'NetworkDiscovererWrapper.m',
+  'OTHER_LDFLAGS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/libZSDK_API.a'
  }
   s.swift_version = '5.0'
 
