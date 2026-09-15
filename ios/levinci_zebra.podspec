@@ -29,16 +29,20 @@ A new Flutter plugin project.
   s.dependency 'Flutter'
   s.platform = :ios, '13.0'
 
-  # libZSDK_API.a's arm64 slice is tagged for device only (legacy LC_VERSION_MIN_IPHONEOS,
-  # no simulator variant), so it can't be vendored normally (that would link it for every SDK).
-  # Link it for device builds only via OTHER_LDFLAGS; the Swift/ObjC code that calls into it
-  # is compiled out for the simulator (see LevinciZebraPlugin.swift / EXCLUDED_SOURCE_FILE_NAMES).
+  # libZSDK_API.a's arm64 slice is built for iOS device, so linking it into an Apple Silicon
+  # simulator build is a hard error. Link it on the app target for device SDKs only; on simulator
+  # nothing references it because the plugin compiles to a stub there (see the simulator branch in
+  # LevinciZebraPlugin.swift plus EXCLUDED_SOURCE_FILE_NAMES below). It has to be the app target:
+  # this pod is a static framework, so its own target never links.
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = {
   'DEFINES_MODULE' => 'YES',
   'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
-  'EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]' => 'NetworkDiscovererWrapper.m',
-  'OTHER_LDFLAGS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/libZSDK_API.a'
+  'EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]' => 'NetworkDiscovererWrapper.m'
+ }
+  s.user_target_xcconfig = {
+  'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '$(inherited) "${PODS_ROOT}/../.symlinks/plugins/levinci_zebra/ios"',
+  'OTHER_LDFLAGS[sdk=iphoneos*]' => '$(inherited) -l"ZSDK_API"'
  }
   s.swift_version = '5.0'
 
